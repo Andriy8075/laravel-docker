@@ -1,0 +1,47 @@
+version: "3.8"
+networks:
+    application:
+        driver: bridge
+
+services:
+    db:
+        image: mysql:8.0
+        ports:
+            - "3306:3306"
+        volumes:
+            - ./data:/var/lib/mysql
+        environment:
+            - MYSQL_ROOT_PASSWORD=root
+            - MYSQL_DATABASE=dockerstepbystep
+        networks:
+            - application
+        container_name: mysqldb
+        healthcheck:
+            test: ["CMD-SHELL", "mysqladmin ping -h localhost -u root -proot || exit 1"]
+            interval: 5s
+            timeout: 5s
+            retries: 30
+        restart: unless-stopped
+
+    app:
+        build: .
+        container_name: mybackend
+        ports:
+            - 8000:8000
+        depends_on:
+            db:
+                condition: service_healthy
+        env_file:
+            - .env
+        networks:
+            - application
+        volumes:
+            - .:/app
+        command: >
+            sh -c "
+            while ! mysqladmin ping -h db -u root -proot --silent; do sleep 1; done &&
+            composer install &&
+            php artisan migrate &&
+            php artisan serve --host=0.0.0.0 --port=8000
+            "
+        restart: unless-stopped
