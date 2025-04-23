@@ -1,0 +1,4 @@
+data/
+vendor/
+.git
+node_modules/

@@ -12,7 +12,7 @@ services:
             - ./data:/var/lib/mysql
         environment:
             - MYSQL_ROOT_PASSWORD=root
-            - MYSQL_DATABASE=dockerstepbystep
+            - MYSQL_DATABASE=dockerlaravel
         networks:
             - application
         container_name: mysqldb
@@ -25,21 +25,31 @@ services:
 
     app:
         build: .
-        container_name: mybackend
+        container_name: backend
         ports:
             - 8000:8000
         depends_on:
             db:
                 condition: service_healthy
-        env_file:
-            - .env
+        environment:
+            - APP_NAME=laravel
+            - APP_ENV=local
+            - APP_KEY=base64:TvMKeLj2LND4hZqXdbQFiTg8BkXCAwty4wDLlAmNZsQ=
+            - APP_DEBUG=true
+            - APP_URL=http://localhost
+
+            - DB_CONNECTION=mysql
+            - DB_HOST=db
+            - DB_PORT=3306
+            - DB_DATABASE=dockerlaravel
+            - DB_USERNAME=root
+            - DB_PASSWORD=root
         networks:
             - application
         volumes:
             - .:/app
         command: >
             sh -c "
-            while ! mysqladmin ping -h db -u root -proot --silent; do sleep 1; done &&
             composer install &&
             php artisan migrate &&
             php artisan serve --host=0.0.0.0 --port=8000
