@@ -15,7 +15,7 @@ services:
             - MARIADB_DATABASE=dockerlaravel
             - MARIADB_USER=laravel
             - MARIADB_PASSWORD=secret
-            - MARIADB_AUTO_UPGRADE=1  # Optional for auto-upgrade safety
+            - MARIADB_AUTO_UPGRADE=1
         networks:
             - application
         container_name: mysqldb

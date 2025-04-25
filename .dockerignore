@@ -2,3 +2,6 @@ data/
 vendor/
 .git
 node_modules/
+.idea/
+.github/
+.tests/

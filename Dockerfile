@@ -15,7 +15,6 @@ RUN composer install --no-dev --no-scripts --optimize-autoloader
 # Stage 3: Final image
 FROM php:8.2-fpm-alpine
 
-# Runtime deps (без dev-пакетів)
 RUN apk add --no-cache \
     libpng \
     oniguruma \
@@ -23,7 +22,6 @@ RUN apk add --no-cache \
     mariadb-client \
     libzip
 
-# Build deps (видаляються після встановлення)
 RUN apk add --no-cache --virtual .build-deps \
     libpng-dev \
     oniguruma-dev \
@@ -42,7 +40,6 @@ apk del .build-deps
 
 WORKDIR /var/www
 
-# Copy only necessary files
 COPY --from=php-deps /app/vendor ./vendor
 COPY --from=node-build /app/public/build ./public/build
 COPY . .
@@ -50,7 +47,6 @@ COPY . .
 RUN ls -la
 RUN ls -la /var/www
 
-# Fix permissions
 RUN chown -R www-data:www-data storage bootstrap/cache
 
 EXPOSE 8000
