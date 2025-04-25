@@ -51,6 +51,11 @@ COPY --from=php-deps /app/vendor ./vendor
 COPY --from=node-build /app/public/build ./public/build
 COPY . .
 
+RUN if [ ! -f .env ]; then cp .env.example .env; fi
+
+RUN ls -la
+RUN ls -la /var/www
+
 # Fix permissions
 RUN chown -R www-data:www-data storage bootstrap/cache
 
