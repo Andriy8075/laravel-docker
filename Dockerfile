@@ -37,7 +37,7 @@ RUN apk add --no-cache --virtual .build-deps \
     mbstring \
     gd \
     zip && \
-apk del .build-deps \
+apk del .build-deps
 
 
 WORKDIR /var/www
