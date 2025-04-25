@@ -1,75 +1,59 @@
-# Stage 1: Build Node assets
+# Stage 1: Node builder
 FROM node:18-alpine AS node-build
 WORKDIR /app
-
-# Copy only the necessary files for npm to avoid cache busting
 COPY package*.json ./
-RUN npm install
-
-# Copy the rest of the app to build assets
+RUN npm install && npm cache clean --force
 COPY . .
-RUN npm run build
+RUN npm run build && rm -rf node_modules
 
-# Stage 2: Install PHP dependencies with Composer
+# Stage 2: Composer builder
 FROM composer:2 AS php-deps
 WORKDIR /app
-COPY . .
-RUN composer install --no-dev --optimize-autoloader
+COPY composer.* ./
+RUN composer install --no-dev --no-scripts --optimize-autoloader
 
-# Stage 3: Final production image
-FROM php:8.2-fpm-alpine AS production
+# Stage 3: Final image
+FROM php:8.2-fpm-alpine
 
-# Install system dependencies
-RUN apk add --no-cache --update \
-    libpng-dev \
-    oniguruma-dev \
-    libxml2-dev \
-    zip \
-    unzip \
-    git \
-    curl \
-    mysql-client \
-    libzip-dev \
-    gnupg \
-    autoconf \
-    g++ \
-    make \
-    nodejs \
-    npm
-
-# Install PHP extensions
-RUN docker-php-ext-install \
-    pdo \
-    pdo_mysql \
-    mysqli \
-    mbstring \
-    exif \
-    pcntl \
-    bcmath \
-    gd \
-    zip
-
-# Install Composer manually
 RUN curl -sS https://getcomposer.org/installer | php -- \
     --install-dir=/usr/local/bin --filename=composer
 
-# Set working directory
+# Runtime deps (без dev-пакетів)
+RUN apk add --no-cache \
+    libpng \
+    oniguruma \
+    libxml2 \
+    mariadb-client \
+    libzip \
+    nodejs \
+    npm
+
+# Build deps (видаляються після встановлення)
+RUN apk add --no-cache --virtual .build-deps \
+    libpng-dev \
+    oniguruma-dev \
+    libxml2-dev \
+    libzip-dev \
+    autoconf \
+    g++ \
+    make && \
+    docker-php-ext-install \
+    pdo_mysql \
+    mbstring \
+    gd \
+    zip && \
+    apk del .build-deps
+
 WORKDIR /var/www
 
-# Copy necessary files from composer stage
-COPY --from=php-deps /app /var/www
+# Copy only necessary files
+COPY --from=php-deps /app/vendor ./vendor
+COPY --from=node-build /app/public/build ./public/build
+COPY . .
 
-# Copy built assets from node stage
-COPY --from=node-build /app/public /var/www/public
-
-# If needed, you can copy the .env and any other config manually
-# COPY .env /var/www/.env
 # Fix permissions
-RUN chown -R www-data:www-data /var/www/storage /var/www/bootstrap/cache
-# Clean up
-RUN rm -rf /var/cache/apk/* /tmp/*
+RUN chown -R www-data:www-data storage bootstrap/cache
 
-# Expose port if needed
-EXPOSE 9000
+EXPOSE 8000
 
 CMD ["php-fpm"]

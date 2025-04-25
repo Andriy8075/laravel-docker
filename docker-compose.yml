@@ -5,19 +5,22 @@ networks:
 
 services:
     db:
-        image: mysql:8.0
+        image: mariadb:latest
         ports:
             - "3306:3306"
         volumes:
             - ./data:/var/lib/mysql
         environment:
-            - MYSQL_ROOT_PASSWORD=root
-            - MYSQL_DATABASE=dockerlaravel
+            - MARIADB_ROOT_PASSWORD=root
+            - MARIADB_DATABASE=dockerlaravel
+            - MARIADB_USER=laravel
+            - MARIADB_PASSWORD=secret
+            - MARIADB_AUTO_UPGRADE=1  # Optional for auto-upgrade safety
         networks:
             - application
         container_name: mysqldb
         healthcheck:
-            test: ["CMD-SHELL", "mysqladmin ping -h localhost -u root -proot || exit 1"]
+            test: ["CMD", "mariadb-admin", "ping", "--user=root", "--password=root"]
             interval: 5s
             timeout: 5s
             retries: 30
@@ -27,7 +30,14 @@ services:
         build: .
         container_name: backend
         ports:
-            - 8000:8000
+            - "8000:8000"
+        command: sh -c "
+            composer install &&
+            npm install &&
+            npm run build &&
+            php artisan migrate &&
+            php artisan serve --host=0.0.0.0 --port=8000
+            "
         depends_on:
             db:
                 condition: service_healthy
@@ -42,18 +52,10 @@ services:
             - DB_HOST=db
             - DB_PORT=3306
             - DB_DATABASE=dockerlaravel
-            - DB_USERNAME=root
-            - DB_PASSWORD=root
+            - DB_USERNAME=laravel
+            - DB_PASSWORD=secret
         networks:
             - application
         volumes:
-            - .:/app
-        command: >
-            sh -c "
-            composer install &&
-            npm install &&
-            npm run build &&
-            php artisan migrate &&
-            php artisan serve --host=0.0.0.0 --port=8000
-            "
+            - .:/var/www
         restart: unless-stopped
