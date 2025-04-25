@@ -15,18 +15,13 @@ RUN composer install --no-dev --no-scripts --optimize-autoloader
 # Stage 3: Final image
 FROM php:8.2-fpm-alpine
 
-RUN curl -sS https://getcomposer.org/installer | php -- \
-    --install-dir=/usr/local/bin --filename=composer
-
 # Runtime deps (без dev-пакетів)
 RUN apk add --no-cache \
     libpng \
     oniguruma \
     libxml2 \
     mariadb-client \
-    libzip \
-    nodejs \
-    npm
+    libzip
 
 # Build deps (видаляються після встановлення)
 RUN apk add --no-cache --virtual .build-deps \
@@ -42,7 +37,8 @@ RUN apk add --no-cache --virtual .build-deps \
     mbstring \
     gd \
     zip && \
-    apk del .build-deps
+apk del .build-deps \
+
 
 WORKDIR /var/www
 
@@ -50,8 +46,6 @@ WORKDIR /var/www
 COPY --from=php-deps /app/vendor ./vendor
 COPY --from=node-build /app/public/build ./public/build
 COPY . .
-
-RUN if [ ! -f .env ]; then cp .env.example .env; fi
 
 RUN ls -la
 RUN ls -la /var/www
